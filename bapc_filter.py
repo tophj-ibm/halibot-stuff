@@ -2,6 +2,7 @@ import re
 import tokenize
 from io import StringIO
 import itertools
+import logging
 
 # GRAMMAR:
 # S       ::= CLAUSES END
@@ -10,60 +11,65 @@ import itertools
 # COND    ::= SCOND and COND | SCOND
 # SCOND   ::= quoted_regex
 
+
 def tokenize_line(line):
     return tokenize.generate_tokens(StringIO(line).readline)
+
+
+class ParseError(Exception):
+    def __init__(self, t):
+        self.msg = ("Unexpected token: '" + t.string +
+                    "' at position " + str(t.start[1]))
 
 
 class Tokens:
     def __init__(self, line):
         self.token_generator = tokenize_line(line)
 
-
     def peek(self):
         val = self.token_generator.__next__()
         self.token_generator = itertools.chain([val], self.token_generator)
         return val
 
-
     def next(self):
         return self.token_generator.__next__()
 
 
-    def __next__(self):
-        return self.next()
-
-
 def expect(tokens, type):
+    if tokens.peek().type != type:
+        raise ParseError(tokens.peek())
     assert(tokens.peek().type == type)
     return tokens.next()
 
 
 def exec_re(r, i):
-    print("Searching '" + i + "' for regex :" + r.pattern)
     worked = r.search(i) is not None
-    print("Got: ", worked)
+    logging.debug("Searching '" + i + "' for regex '" + r.pattern + "', got ",
+                  worked)
     return worked
 
+
 def parse_scond(tokens, d):
-    print(d + "parse_scond " + tokens.peek().string)
+    logging.debug(d + "parse_scond " + tokens.peek().string)
     val = expect(tokens, tokenize.STRING)
-    terminal_regex = re.compile(val.string[1:-1]) # need to trim the quotes!
+    terminal_regex = re.compile(val.string[1:-1])  # need to trim the quotes!
     return lambda input: exec_re(terminal_regex, input)
 
 
 def parse_cond(tokens, d):
-    print(d + "parse_cond " + tokens.peek().string)
+    logging.debug(d + "parse_cond " + tokens.peek().string)
     l = parse_scond(tokens, d + "  ")
     if tokens.peek().string == "AND":
-        print(d + "AND")
-        tokens.next() # throw it away!
+        logging.debug(d + "AND")
+        tokens.next()  # throw it away!
         r = parse_cond(tokens, d + "  ")
         return lambda line: l(line) and r(line)
     else:
         return l
 
+
 def parse_clause(tokens, d):
-    print(d + "parse_clause " + tokens.peek().string)
+    logging.debug(d + "parse_clause " + tokens.peek().string)
     a_or_r = expect(tokens, tokenize.NAME)
     l = parse_cond(tokens, d + "  ")
     if a_or_r.string == "accept":
@@ -71,30 +77,25 @@ def parse_clause(tokens, d):
     elif a_or_r.string == "reject":
         return lambda line: not l(line)
     else:
-        assert(False)
+        raise ParseError(a_or_r)
+
 
 def parse_clauses(tokens, d):
-    print(d + "parse_clauses " + tokens.peek().string)
+    logging.debug(d + "parse_clauses " + tokens.peek().string)
     clauses = []
     while tokens.peek().type == tokenize.NAME:
         clauses.append(parse_clause(tokens, d + "  "))
 
     return clauses
-    next = tokens.peek()
-    if next.type != tokenize.NAME:
-        return []
-    clause = parse_clause(tokens, d + "  ")
-    clauses = parse_clauses(tokens, d + "  ")
-    print(d + "clauses: ", clauses)
-    return clauses.append(clause)
 
 
-def parse(line):
+def parse_command(line):
     [name, rules] = line.split(": ", 1)
     tokens = Tokens(rules)
     clauses = parse_clauses(tokens, "")
     expect(tokens, tokenize.ENDMARKER)
     return (name, clauses)
+
 
 def execute(clauses, input):
     return all([clause(input) for clause in clauses])

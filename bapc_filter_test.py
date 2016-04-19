@@ -1,6 +1,6 @@
 import unittest
 
-import create_filter
+import bapc_filter
 
 
 def test_cases(file):
@@ -19,12 +19,12 @@ class TestGeneratedRules(unittest.TestCase):
         str = ""
         with open("ex.txt", 'r') as f:
             str = f.read()[:-1]  # get rid of last newline
-        (name, clauses) = create_filter.parse(str)
+        (name, clauses) = bapc_filter.parse_command(str)
 
         cases = test_cases("monitors_samples.txt")
         for (case, expect) in cases:
             print(case)
-            self.assertEqual(create_filter.execute(clauses, case), expect)
+            self.assertEqual(bapc_filter.execute(clauses, case), expect)
 
 if __name__ == '__main__':
     unittest.main()
