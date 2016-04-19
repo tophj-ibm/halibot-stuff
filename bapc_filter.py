@@ -12,6 +12,8 @@ import logging
 # SCOND   ::= quoted_regex
 
 
+log = logging.getLogger()
+
 def tokenize_line(line):
 	return tokenize.generate_tokens(StringIO(line).readline)
 
@@ -44,19 +46,19 @@ def expect(tokens, type):
 
 def exec_re(r, i):
 	worked = r.search(i) is not None
-	logging.debug("Searching '{}' for regex '{}', got {}".format(i, r.pattern, worked))
+	log.debug("Searching '{}' for regex '{}', got {}".format(i, r.pattern, worked))
 	return worked
 
 
 def parse_scond(tokens, d):
-	logging.debug(d + "parse_scond " + tokens.peek().string)
+	log.debug(d + "parse_scond " + tokens.peek().string)
 	val = expect(tokens, tokenize.STRING)
 	terminal_regex = re.compile(val.string[1:-1])  # need to trim the quotes!
 	return lambda input: exec_re(terminal_regex, input)
 
 
 def parse_cond(tokens, d):
-	logging.debug(d + "parse_cond " + tokens.peek().string)
+	log.debug(d + "parse_cond " + tokens.peek().string)
 	l = parse_scond(tokens, d + "  ")
 	if tokens.peek().string == "AND":
 	    logging.debug(d + "AND")
@@ -68,7 +70,7 @@ def parse_cond(tokens, d):
 
 
 def parse_clause(tokens, d):
-	logging.debug(d + "parse_clause " + tokens.peek().string)
+	log.debug(d + "parse_clause " + tokens.peek().string)
 	a_or_r = expect(tokens, tokenize.NAME)
 	l = parse_cond(tokens, d + "  ")
 	if a_or_r.string == "accept":
@@ -80,7 +82,7 @@ def parse_clause(tokens, d):
 
 
 def parse_clauses(tokens, d):
-	logging.debug(d + "parse_clauses " + tokens.peek().string)
+	log.debug(d + "parse_clauses " + tokens.peek().string)
 	clauses = []
 	while tokens.peek().type == tokenize.NAME:
 	    clauses.append(parse_clause(tokens, d + "  "))

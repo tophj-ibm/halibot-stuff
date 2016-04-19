@@ -1,6 +1,8 @@
 import unittest
-
+import logging
 import bapc_filter
+
+logging.basicConfig(level=logging.INFO)
 
 
 def test_cases(file):
