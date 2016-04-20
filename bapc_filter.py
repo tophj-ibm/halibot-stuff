@@ -36,6 +36,17 @@ class Tokens:
 	def next(self):
 	    return self.token_generator.__next__()
 
+class Filter:
+	def __init__(self, line, clauses):
+		self.line = line
+		self.clauses = clauses
+
+	def __str__(self):
+		return line
+
+	def match(self, instr):
+		return all([clause(instr) for clause in self.clauses])
+
 
 def expect(tokens, type):
 	if tokens.peek().type != type:
@@ -95,8 +106,8 @@ def parse_command(line):
 	tokens = Tokens(rules)
 	clauses = parse_clauses(tokens, "")
 	expect(tokens, tokenize.ENDMARKER)
-	return (name, clauses)
+	return (name, Filter(line, clauses))
 
 
-def execute(clauses, input):
-	return all([clause(input) for clause in clauses])
+def execute(fil, input):
+	return all([clause(input) for clause in fil.clauses])
