@@ -45,6 +45,19 @@ class Tokens:
         return self.next()
 
 
+class Filter:
+
+    def __init__(self, line, clauses):
+        self.line = line
+        self.clauses = clauses
+
+    def __str__(self):
+        return line
+
+    def match(self, instr):
+        return all([clause(instr) for clause in self.clauses])
+
+
 def exec_re(r, i):
     worked = r.search(i) is not None
     log.debug("Searching '{}' for regex '{}', got {}".format(
@@ -88,7 +101,6 @@ def parse_clauses(tokens, d):
     clauses = []
     while tokens.peek().type == tokenize.NAME:
         clauses.append(parse_clause(tokens, d + "  "))
-
     return clauses
 
 
@@ -97,8 +109,8 @@ def parse_command(line):
     tokens = Tokens(rules)
     clauses = parse_clauses(tokens, "")
     tokens.expect(tokenize.ENDMARKER)
-    return (name, clauses)
+    return (name, Filter(line, clauses))
 
 
-def execute(clauses, input):
-    return all([clause(input) for clause in clauses])
+def execute(fil, input):
+    return all([clause(input) for clause in fil.clauses])
