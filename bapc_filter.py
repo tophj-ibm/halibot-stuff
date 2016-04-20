@@ -44,8 +44,7 @@ def expect(tokens, type):
 
 def exec_re(r, i):
 	worked = r.search(i) is not None
-	logging.debug("Searching '" + i + "' for regex '" + r.pattern + "', got ",
-	              worked)
+	logging.debug("Searching '{}' for regex '{}', got {}".format(i, r.pattern, worked))
 	return worked
 
 
